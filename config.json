@@ -1,0 +1,10 @@
+{
+  "port": 5000,
+  "host": "127.0.0.1",
+  "divider": 2.0,
+  "use_mult": false,
+  "atten_coeff": 1.0,
+  "dense_coeff": 1.0,
+  "sparse_coeff": 1.0,
+  "colbert_coeff": 1.0
+}
