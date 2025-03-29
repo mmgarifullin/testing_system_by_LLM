@@ -43,3 +43,21 @@
 Более подробно про эти оценки можно почитать в статье (https://arxiv.org/pdf/2402.03216), пункт 3.2 
 Hybrid Retrieval, где подпункт Dense retrieval соответствует оценке dense, Lexical Retrieval оценке sparse 
 и Multi-Vector Retrieval оценке colbert. 
+<br />
+<br />
+Инструкция по запуску системы:
+<br />
+<br />
+1) Запустить файл <strong>api.exe</strong>
+<br />
+<br />
+2)</div> 
+<br />
+<pre>
+<strong>
+conda activate phidata
+streamlit run preprocessing.py
+</strong>
+</pre>
+<br />
+<div style="color: red;">
