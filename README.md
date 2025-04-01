@@ -51,7 +51,9 @@ Hybrid Retrieval, где подпункт Dense retrieval соответству
 1) Запустить файл <strong>api.exe</strong>
 <br />
 <br />
-2) В терминале Anaconda Promt необходимо ввести следующие команды:</div> 
+2) В терминале Anaconda Promt необходимо ввести следующие команды:
+
+</div> 
 <br />
 <pre>
 <strong>
