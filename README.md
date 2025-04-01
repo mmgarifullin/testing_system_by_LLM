@@ -45,7 +45,7 @@ Hybrid Retrieval, где подпункт Dense retrieval соответству
 и Multi-Vector Retrieval оценке colbert. 
 <br />
 <br />
-Инструкция по запуску системы:
+<strong>Инструкция по запуску системы</strong>:
 <br />
 <br />
 1) Запустить файл <strong>api.exe</strong>
