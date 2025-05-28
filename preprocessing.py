@@ -16,10 +16,14 @@ from client import Client, Config
 
 
 class WebInterface(object):
+    check_1 = False
+    check_2 = False
+    check = False
 
     def __init__(self):
         self.users = self.load_users()
         self.preprocessing = None
+        
         if "_dir_path" not in ss:
             ss._dir_path = os.path.abspath(
                 os.path.dirname(__file__))
@@ -456,13 +460,13 @@ class WebInterface(object):
         src_col, _, dst_col = st.columns(
             (8, 1, 8), gap="small", vertical_alignment="bottom")
         if 'src_tex' not in ss:
-            ss.src_tex = [""]
+            ss.src_tex = []
         if 'src_lbl' not in ss:
-            ss.src_lbl = ["Эталонный ответ на 1 вопрос"]
+            ss.src_lbl = []
         if 'dst_tex' not in ss:
-            ss.dst_tex = [""]
+            ss.dst_tex = []
         if 'dst_lbl' not in ss:
-            ss.dst_lbl = ["Ответ слушателя на 1 вопрос"]
+            ss.dst_lbl = []
         if 'result' not in ss:
             ss.result = ""
         if 'show_all' not in ss:
@@ -504,12 +508,51 @@ class WebInterface(object):
 
         name = st.text_input("Введите фамилию слушателя:", key="listener_surname")
 
-        
+        # Добавление PDF в базу знаний
+        if "file_uploader_key" not in st.session_state:
+            st.session_state["file_uploader_key"] = 100
+        # Добавление PDF в базу знаний
+        if "file_uploader_key_1" not in st.session_state:
+            st.session_state["file_uploader_key_1"] = 200
+            
+        uploaded_file = st.sidebar.file_uploader(
+            "Прикрепите файл с эталонными ответами:", type="pdf", key=st.session_state["file_uploader_key"], accept_multiple_files=True
+        )
+        reader = PDFReader_1(chunk_size=200, separators=['/t'])
+
+        uploaded_file_1 = st.sidebar.file_uploader(
+            "Прикрепите файл с ответами слушателей:", type="pdf", key=st.session_state["file_uploader_key_1"], accept_multiple_files=True
+        )
+        documents_1 = []
+        documents = []
+        if uploaded_file and WebInterface.check_1 == False:
+            for doc in uploaded_file:
+                doc_data = reader.read(doc, doc.name[:-4])
+                if doc_data:
+                    documents.append(doc_data)
+            WebInterface.check_1 = True
+        if uploaded_file_1 and WebInterface.check_2 == False:
+            for doc in uploaded_file_1:
+                doc_data = reader.read(doc, doc.name[:-4])
+                if doc_data:
+                    documents_1.append(doc_data)
+            WebInterface.check_2 = True
+        if documents and documents_1 and WebInterface.check == False:
+            WebInterface.check = True
+            max_len = max(len(documents[0]), len(documents_1[0]))
+            for i in range(max_len):
+                # Добавляем поля для эталонных ответов (если они есть)
+                if i < len(documents[0]):
+                    add_src()
+                    ss.src_tex[i] = documents[0][i]
+                # Добавляем поля для ответов слушателя (если они есть)
+                if i < len(documents_1[0]):
+                    add_dst()
+                    ss.dst_tex[i] = documents_1[0][i]
+            st.success("Текстовые поля успешно заполнены данными из документов!")
 
         def call_api():
-
             ok, result = ss.client(ss.src_tex, ss.dst_tex, ss.params)
-            
             if ok and ss.show_all:
                 mir = pd.MultiIndex.from_tuples([
                     (i, j) for i in result.keys()
@@ -524,7 +567,6 @@ class WebInterface(object):
                     index=mir)
                 ss.result = df
             elif ok:
-
                 df = pd.DataFrame(
                     result["score"],
                     columns=ss.src_lbl,
@@ -532,19 +574,19 @@ class WebInterface(object):
                 diagonal_elements = np.diag(df.values)
                 diagonal_elements = np.array([round(elem, 2) for elem in diagonal_elements])
                 new_df = pd.DataFrame([diagonal_elements], index = [f"{name}"], columns=df.T.columns)
+                new_df = new_df.iloc[:, :len(documents[0])]
                 average_score = new_df.mean(axis=1)
                 new_df['Средний балл'] = average_score
                 new_df['Оценка'] = new_df['Средний балл'].apply(lambda score: assign_grade(score, {'5':ss.params['5'], '4':ss.params['4'], '3':ss.params['3'], '2':ss.params['2']}))
                 ss.result = new_df
                 file_path = r'C:/Users/user/output.xlsx'
                 with pd.ExcelWriter(file_path) as writer:
-                    new_df.to_excel(writer, sheet_name='Лист1')
+                    new_df.to_excel(writer, sheet_name='Ведомость')
             else:
                 ss.result = result
         
         
         if st.button("Скачать результат тестирования в формате XLSX", use_container_width=True):
-            #save_to_excel(ss.result)
             if hasattr(ss, 'result') and isinstance(ss.result, pd.DataFrame):
                 output = io.BytesIO()
                 with pd.ExcelWriter(output, engine='openpyxl') as writer:
@@ -556,22 +598,25 @@ class WebInterface(object):
                 file_name="result.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True
                 )
-
-        with src_col:
-            for k, (l, t) in enumerate(zip(ss.src_lbl, ss.src_tex)):
-                ss.src_lbl[k] = st.text_input("_", value=l, key=f"sl_{k}")
-                ss.src_tex[k] = st.text_area("_", value=t, key=f"st_{k}")
-            src_col.button(r"Добавить эталонный ответ на вопрос", on_click=add_src,
+        if WebInterface.check_1 == True:
+            with src_col:
+                for k, (l, t) in enumerate(zip(ss.src_lbl, ss.src_tex)):
+                    if len(t) > 0:
+                        ss.src_lbl[k] = st.text_input("_", value=l, key=f"sl_{k}")
+                        ss.src_tex[k] = st.text_area("_", value=t, key=f"st_{k}")
+                src_col.button(r"Добавить эталонный ответ на вопрос", on_click=add_src,
                            use_container_width=True)
-            src_col.button(r"Удалить эталонный ответ на вопрос", on_click=rem_src,
+                src_col.button(r"Удалить эталонный ответ на вопрос", on_click=rem_src,
                            use_container_width=True)
-        with dst_col:
-            for k, (l, t) in enumerate(zip(ss.dst_lbl, ss.dst_tex)):
-                ss.dst_lbl[k] = st.text_input("_", value=l, key=f"dl_{k}")
-                ss.dst_tex[k] = st.text_area("_", value=t, key=f"dt_{k}")
-            dst_col.button(r"Добавить ответ слушателя", on_click=add_dst,
+        if WebInterface.check_2 == True:
+            with dst_col:
+                for k, (l, t) in enumerate(zip(ss.dst_lbl, ss.dst_tex)):
+                    if len(t) > 0:
+                        ss.dst_lbl[k] = st.text_input("_", value=l, key=f"dl_{k}")
+                        ss.dst_tex[k] = st.text_area("_", value=t, key=f"dt_{k}")
+                dst_col.button(r"Добавить ответ слушателя", on_click=add_dst,
                            use_container_width=True)
-            dst_col.button(r"Удалить ответ слушателя", on_click=rem_dst,
+                dst_col.button(r"Удалить ответ слушателя", on_click=rem_dst,
                            use_container_width=True)
 
         settings, result = st.columns((8, 2), gap="small")
@@ -597,10 +642,10 @@ class WebInterface(object):
                     min_value=0., value=ss.params['atten_coeff'])
                 ss.params['divider'] = st.number_input(
                     "Знаменатель в формуле суммации компонент",
-                    min_value=1., value=ss.params['divider'])
+                    min_value=1., value=2.0) ##ss.params['divider'])
                 ss.params['5'] = st.number_input('Нижняя граница 5:', value=90.0, min_value=0.0, max_value=100.0, step=1.0)
-                ss.params['4'] = st.number_input('Нижняя граница 4:', value=80.0, min_value=0.0, max_value=100.0, step=1.0)
-                ss.params['3'] = st.number_input('Нижняя граница 3:', value=50.0, min_value=0.0, max_value=100.0, step=1.0)
+                ss.params['4'] = st.number_input('Нижняя граница 4:', value=74.0, min_value=0.0, max_value=100.0, step=1.0)
+                ss.params['3'] = st.number_input('Нижняя граница 3:', value=57.0, min_value=0.0, max_value=100.0, step=1.0)
                 ss.params['2'] = st.number_input('Нижняя граница 2:', value=0.0, min_value=0.0, max_value=100.0, step=1.0)
         with result:
             result.button("Проверка", on_click=call_api, use_container_width=True)
