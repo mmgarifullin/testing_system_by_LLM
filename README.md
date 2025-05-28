@@ -48,18 +48,7 @@ Hybrid Retrieval, где подпункт Dense retrieval соответству
 <strong>Инструкция по запуску системы</strong>:
 <br />
 <br />
-1) Запустить файл <strong>api.exe</strong>
+1) Запустить файл <strong>preprocessing_start.bat</strong>
 <br />
-<br />
-2) В терминале Anaconda Promt необходимо ввести следующие команды:
-
-</div> 
-<br />
-<pre>
-<strong>
-conda activate phidata
-streamlit run preprocessing.py
-</strong>
-</pre>
 <br />
 <div style="color: red;">
